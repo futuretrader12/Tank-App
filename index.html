@@ -419,12 +419,22 @@ async function search() {
   document.getElementById('btnSearch').disabled = true;
 
   try {
-    const url = `https://creativecommons.tankerkoenig.de/api/v4/stations/nearby.json?lat=${coords.lat}&lng=${coords.lon}&rad=${radius}&type=${fuelType}&apikey=00000000-0000-0000-0000-000000000002`;
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
+    const apiUrl = `https://creativecommons.tankerkoenig.de/api/v4/stations/nearby.json?lat=${coords.lat}&lng=${coords.lon}&rad=${radius}&type=${fuelType}&apikey=00000000-0000-0000-0000-000000000002`;
+    // Try direct first, fall back to CORS proxy for Safari/iOS
+    let resp, data;
+    try {
+      resp = await fetch(apiUrl, { mode: 'cors' });
+      if (!resp.ok) throw new Error('direct failed');
+      data = await resp.json();
+      if (!data.ok) throw new Error('direct failed');
+    } catch {
+      const proxy = `https://corsproxy.io/?url=${encodeURIComponent(apiUrl)}`;
+      resp = await fetch(proxy);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      data = await resp.json();
+    }
 
-    if (!data.ok) throw new Error(data.message || 'API-Fehler');
+    if (!data.ok) throw new Error(data.message || 'Keine Daten erhalten');
 
     stations = (data.stations || []).filter(s => s[fuelType] && s[fuelType] > 0);
 
