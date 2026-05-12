@@ -419,24 +419,26 @@ async function search() {
   document.getElementById('btnSearch').disabled = true;
 
   try {
-    const apiUrl = `https://creativecommons.tankerkoenig.de/api/v4/stations/nearby.json?lat=${coords.lat}&lng=${coords.lon}&rad=${radius}&type=${fuelType}&apikey=a73d8fa4-0395-4ca9-b550-e93f5efd6748`;
-    // Try direct first, fall back to CORS proxy for Safari/iOS
-    let resp, data;
-    try {
-      resp = await fetch(apiUrl, { mode: 'cors' });
-      if (!resp.ok) throw new Error('direct failed');
-      data = await resp.json();
-      if (!data.ok) throw new Error('direct failed');
-    } catch {
-      const proxy = `https://corsproxy.io/?url=${encodeURIComponent(apiUrl)}`;
-      resp = await fetch(proxy);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      data = await resp.json();
+    const apiUrl = `https://creativecommons.tankerkoenig.de/json/list.php?lat=${coords.lat}&lng=${coords.lon}&rad=${radius}&sort=dist&type=${fuelType}&apikey=a73d8fa4-0395-4ca9-b550-e93f5efd6748`;
+    const proxies = [
+      u => u,
+      u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+      u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+    ];
+    let data = null;
+    let lastErr = '';
+    for (const makeUrl of proxies) {
+      try {
+        const resp = await fetch(makeUrl(apiUrl));
+        if (!resp.ok) { lastErr = `HTTP ${resp.status}`; continue; }
+        const json = await resp.json();
+        if (json.ok) { data = json; break; }
+        lastErr = json.message || 'API-Fehler';
+      } catch(e) { lastErr = e.message; }
     }
+    if (!data) throw new Error(lastErr || 'Alle Verbindungsversuche fehlgeschlagen');
 
-    if (!data.ok) throw new Error(data.message || 'Keine Daten erhalten');
-
-    stations = (data.stations || []).filter(s => s[fuelType] && s[fuelType] > 0);
+    stations = (data.stations || []).filter(s => s[fuelType] != null && s[fuelType] !== false && s[fuelType] > 0);
 
     if (!stations.length) {
       setStatus('', '');
