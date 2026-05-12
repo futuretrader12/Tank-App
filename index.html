@@ -419,7 +419,7 @@ async function search() {
   document.getElementById('btnSearch').disabled = true;
 
   try {
-    const apiUrl = `https://creativecommons.tankerkoenig.de/json/list.php?lat=${coords.lat}&lng=${coords.lon}&rad=${radius}&sort=dist&type=${fuelType}&apikey=a73d8fa4-0395-4ca9-b550-e93f5efd6748`;
+    const apiUrl = `https://creativecommons.tankerkoenig.de/json/list.php?lat=${coords.lat}&lng=${coords.lon}&rad=${radius}&sort=dist&type=all&apikey=a73d8fa4-0395-4ca9-b550-e93f5efd6748`;
     const proxies = [
       u => u,
       u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
